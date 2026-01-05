@@ -5,18 +5,18 @@ from Crypto.Cipher import AES
 
 def generate_aes_key(password: str, salt: bytes = None) -> tuple[bytes, bytes]:
     if not any(char.isdigit() for char in password):
-        raise ValueError("String must contain at least one number.")
+        raise ValueError("Password must contain at least one number")
         
     if not any(char.isupper() for char in password):
-        raise ValueError("String must contain at least one uppercase letter.")
+        raise ValueError("Password must contain at least one uppercase letter")
         
     if not any(char in string.punctuation for char in password):
-        raise ValueError("String must contain at least one special character.")
+        raise ValueError("Password must contain at least one special character")
     
     if salt is None:
         salt = os.urandom(16)
 
-    key = hashlib.pbkdf2_hmac('sha256', salt, 6000000, 32)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 600000)
 
     key_salt_tuple = (key, salt)
 
@@ -28,7 +28,7 @@ def encrypt_file(file_path: str, password: str) -> str:
 
     cipher = AES.new(key, AES.MODE_GCM)
 
-    with open (file_path, "r") as fileToEnc:
+    with open (file_path, "rb") as fileToEnc:
         text = fileToEnc.read()
 
     ciphertext, tag = cipher.encrypt_and_digest(text)
@@ -47,24 +47,6 @@ def encrypt_file(file_path: str, password: str) -> str:
 
 
 def decrypt_file(file_path: str, password: str) -> str:
-    """
-    Decrypts a file encrypted with encrypt_file.
-    
-    Args:
-        file_path (str): Path to the encrypted file.
-        password (str): Password to use for decryption.
-        
-    Returns:
-        str: Path to the decrypted file.
-    """
-    # TODO: Implement this function
-    # 1. Read Salt, Nonce, Tag, and Ciphertext from the file
-    # 2. Regenerate key using the extracted salt
-    # 3. Create AES cipher in GCM mode with the nonce
-    # 4. Decrypt and verify
-    # 5. Write decrypted data to output file (remove .enc or add .dec)
-    
-
 
     with open(file_path, "rb") as DescryptedFile:
         salt = DescryptedFile.read(16)  
@@ -82,7 +64,7 @@ def decrypt_file(file_path: str, password: str) -> str:
         decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
         
     except ValueError:
-        print("Varification Failed! Wrong Password Or Tempered File")
+        raise ValueError("Decryption failed")
 
     if file_path.endswith(".enc"):
         file_path = file_path[:-4]
@@ -91,7 +73,7 @@ def decrypt_file(file_path: str, password: str) -> str:
         file_path = file_path + ".dec"
 
     with open(file_path, "w") as decryptedFileWrite:
-        decryptedFileWrite.write(decrypted_data)
+        decryptedFileWrite.write(decrypted_data.decode('utf-8'))
 
     return file_path
 
