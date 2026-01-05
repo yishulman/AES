@@ -18,10 +18,33 @@ def generate_aes_key(password: str, salt: bytes = None) -> tuple[bytes, bytes]:
                              You must store the salt to regenerate the same key later.
     """
     # TODO: Implement this function
-    # 1. Validate password complexity (number, uppercase, special char)
+    # 1. Validate password complexity (number, uppercase, special char) V
     # 2. Generate salt if not provided
     # 3. Use PBKDF2-HMAC-SHA256 with 600,000 iterations to derive the key
-    raise NotImplementedError("generate_aes_key not implemented")
+
+    if not any(char.isdigit() for char in password):
+        raise ValueError("String must contain at least one number.")
+        
+    # 2. Check for at least one uppercase letter
+    if not any(char.isupper() for char in password):
+        raise ValueError("String must contain at least one uppercase letter.")
+        
+    if not any(char in string.punctuation for char in password):
+        raise ValueError("String must contain at least one special character.")
+    
+    if salt is None:
+        salt = os.urandom(16)
+
+    key = hashlib.pbkdf2_hmac('sha256', salt, 6000000, 32)
+
+    key_salt_tuple = (key, salt)
+
+    return key_salt_tuple
+
+    
+
+
+    #raise NotImplementedError("generate_aes_key not implemented")
 
 def encrypt_file(file_path: str, password: str) -> str:
     """
