@@ -4,28 +4,9 @@ import string
 from Crypto.Cipher import AES
 
 def generate_aes_key(password: str, salt: bytes = None) -> tuple[bytes, bytes]:
-    """
-    Generates a 256-bit AES key from a password using PBKDF2.
-    
-    If salt is not provided, a new random salt is generated.
-    
-    Args:
-        password (str): The input password.
-        salt (bytes, optional): The salt to use. If None, a new salt is generated.
-        
-    Returns:
-        tuple[bytes, bytes]: A tuple (key, salt) containing the 32-byte (256-bit) key and the generated salt.
-                             You must store the salt to regenerate the same key later.
-    """
-    # TODO: Implement this function
-    # 1. Validate password complexity (number, uppercase, special char) V
-    # 2. Generate salt if not provided
-    # 3. Use PBKDF2-HMAC-SHA256 with 600,000 iterations to derive the key
-
     if not any(char.isdigit() for char in password):
         raise ValueError("String must contain at least one number.")
         
-    # 2. Check for at least one uppercase letter
     if not any(char.isupper() for char in password):
         raise ValueError("String must contain at least one uppercase letter.")
         
@@ -41,32 +22,29 @@ def generate_aes_key(password: str, salt: bytes = None) -> tuple[bytes, bytes]:
 
     return key_salt_tuple
 
-    
-
-
-    #raise NotImplementedError("generate_aes_key not implemented")
-
 def encrypt_file(file_path: str, password: str) -> str:
-    """
-    Encrypts a file using AES-256-GCM.
     
-    The output file will have the same name with '.enc' appended.
-    The file structure is: Salt (16 bytes) + Nonce (16 bytes) + Tag (16 bytes) + Ciphertext.
-    
-    Args:
-        file_path (str): Path to the file to encrypt.
-        password (str): Password to use for encryption.
-        
-    Returns:
-        str: Path to the encrypted file.
-    """
-    # TODO: Implement this function
-    # 1. Generate key and salt
-    # 2. Create AES cipher in GCM mode
-    # 3. Read file data
-    # 4. Encrypt and digest
-    # 5. Write Salt, Nonce, Tag, and Ciphertext to the output file
-    raise NotImplementedError("encrypt_file not implemented")
+    key, salt = generate_aes_key(password, salt=None)
+
+    cipher = AES.new(key, AES.MODE_GCM)
+
+    with open (file_path, "r") as fileToEnc:
+        text = fileToEnc.read()
+
+    ciphertext, tag = cipher.encrypt_and_digest(text)
+
+
+    enc_file_path = file_path + ".enc"
+
+    with open(enc_file_path, "wb") as writeFileToEnc:
+        writeFileToEnc.write(salt)      
+        writeFileToEnc.write(cipher.nonce) 
+        writeFileToEnc.write(tag)    
+        writeFileToEnc.write(ciphertext) 
+
+    return enc_file_path
+
+
 
 def decrypt_file(file_path: str, password: str) -> str:
     """
