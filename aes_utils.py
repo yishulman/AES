@@ -23,7 +23,7 @@ def generate_aes_key(password: str, salt: bytes = None) -> tuple[bytes, bytes]:
     return key_salt_tuple
 
 def encrypt_file(file_path: str, password: str) -> str:
-    
+
     key, salt = generate_aes_key(password, salt=None)
 
     cipher = AES.new(key, AES.MODE_GCM)
@@ -63,7 +63,41 @@ def decrypt_file(file_path: str, password: str) -> str:
     # 3. Create AES cipher in GCM mode with the nonce
     # 4. Decrypt and verify
     # 5. Write decrypted data to output file (remove .enc or add .dec)
-    raise NotImplementedError("decrypt_file not implemented")
+    
+
+
+    with open(file_path, "rb") as DescryptedFile:
+        salt = DescryptedFile.read(16)  
+        nonce = DescryptedFile.read(16) 
+        tag = DescryptedFile.read(16)  
+        ciphertext = DescryptedFile.read() 
+
+
+    key, salt = generate_aes_key(password, salt)
+
+    cipher = AES.new(key, AES.MODE_GCM)
+    cipher = AES.new(key, AES.MODE_GCM, nonce)
+
+    try:
+        decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
+        
+    except ValueError:
+        print("Varification Failed! Wrong Password Or Tempered File")
+
+    if file_path.endswith(".enc"):
+        file_path = file_path[:-4]
+
+    else:
+        file_path = file_path + ".dec"
+
+    with open(file_path, "w") as decryptedFileWrite:
+        decryptedFileWrite.write(decrypted_data)
+
+    return file_path
+
+
+
+    
 
 if __name__ == "__main__":
     # Example usage
