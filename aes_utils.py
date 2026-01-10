@@ -17,11 +17,28 @@ def generate_aes_key(password: str, salt: bytes = None) -> tuple[bytes, bytes]:
         tuple[bytes, bytes]: A tuple (key, salt) containing the 32-byte (256-bit) key and the generated salt.
                              You must store the salt to regenerate the same key later.
     """
-    # TODO: Implement this function
-    # 1. Validate password complexity (number, uppercase, special char)
-    # 2. Generate salt if not provided
-    # 3. Use PBKDF2-HMAC-SHA256 with 600,000 iterations to derive the key
-    raise NotImplementedError("generate_aes_key not implemented")
+    # Password complexity checks
+    if not any(char.isdigit() for char in password):
+        raise ValueError("Password must contain at least one number")
+    if not any(char.isupper() for char in password):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not any(char in string.punctuation for char in password):
+        raise ValueError("Password must contain at least one special character")
+
+    # Salt: generate if not provided
+    if salt is None:
+        salt = os.urandom(16)
+
+    # Derive a 256-bit (32-byte) key using PBKDF2-HMAC-SHA256
+    key = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt,
+        600_000,
+        dklen=32
+    )
+
+    return key, salt
 
 def encrypt_file(file_path: str, password: str) -> str:
     """
@@ -37,13 +54,29 @@ def encrypt_file(file_path: str, password: str) -> str:
     Returns:
         str: Path to the encrypted file.
     """
-    # TODO: Implement this function
     # 1. Generate key and salt
-    # 2. Create AES cipher in GCM mode
+    key, salt = generate_aes_key(password)
+
+    # 2. Create AES cipher in GCM mode with a 16-byte nonce
+    nonce = os.urandom(16)
+    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+
     # 3. Read file data
-    # 4. Encrypt and digest
-    # 5. Write Salt, Nonce, Tag, and Ciphertext to the output file
-    raise NotImplementedError("encrypt_file not implemented")
+    with open(file_path, 'rb') as f:
+        data = f.read()
+
+    # 4. Encrypt and generate tag
+    ciphertext, tag = cipher.encrypt_and_digest(data)
+
+    # 5. Write Salt (16), Nonce (16), Tag (16), then Ciphertext
+    out_path = f"{file_path}.enc"
+    with open(out_path, 'wb') as f:
+        f.write(salt)
+        f.write(nonce)
+        f.write(tag)
+        f.write(ciphertext)
+
+    return out_path
 
 def decrypt_file(file_path: str, password: str) -> str:
     """
@@ -56,13 +89,36 @@ def decrypt_file(file_path: str, password: str) -> str:
     Returns:
         str: Path to the decrypted file.
     """
-    # TODO: Implement this function
-    # 1. Read Salt, Nonce, Tag, and Ciphertext from the file
+    # 1. Read Salt (16), Nonce (16), Tag (16), and Ciphertext
+    with open(file_path, 'rb') as f:
+        salt = f.read(16)
+        nonce = f.read(16)
+        tag = f.read(16)
+        ciphertext = f.read()
+
     # 2. Regenerate key using the extracted salt
-    # 3. Create AES cipher in GCM mode with the nonce
-    # 4. Decrypt and verify
-    # 5. Write decrypted data to output file (remove .enc or add .dec)
-    raise NotImplementedError("decrypt_file not implemented")
+    try:
+        key, _ = generate_aes_key(password, salt)
+
+        # 3. Create AES cipher in GCM mode with the nonce
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+
+        # 4. Decrypt and verify
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    except Exception:
+        # Any failure (wrong password, corrupted data, tag mismatch) -> raise ValueError
+        raise ValueError("Decryption failed")
+
+    # 5. Write decrypted data to output file (remove .enc if present)
+    if file_path.endswith('.enc'):
+        out_path = file_path[:-4]
+    else:
+        out_path = f"{file_path}.dec"
+
+    with open(out_path, 'wb') as f:
+        f.write(plaintext)
+
+    return out_path
 
 if __name__ == "__main__":
     # Example usage
