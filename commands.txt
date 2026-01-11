@@ -1,0 +1,18 @@
+openssl genpkey -genparam -algorithm DH -out dhp.pem
+
+openssl pkeyparam -in dhp.pem -text
+
+openssl genpkey -paramfile dhp.pem -out dhprivate1.pem
+openssl genpkey -paramfile dhp.pem -out dhprivate2.pem
+
+
+openssl pkey -in dhprivate1.pem -text
+openssl pkey -in dhprivate2.pem -text
+
+openssl pkey -in dhprivate1.pem -pubout -out dhpub1.pem
+openssl pkey -in dhprivate2.pem -pubout -out dhpub2.pem
+
+openssl pkeyutl -derive -inkey dhprivate1.pem -peerkey dhpub2.pem -out shared1.bin
+openssl pkeyutl -derive -inkey dhprivate2.pem -peerkey dhpub1.pem -out shared2.bin
+
+sha256sum shared1.bin shared2.bin
